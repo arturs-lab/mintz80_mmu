@@ -21,8 +21,9 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 	wire memmapwr;
 	wire [2:0]memmap;
 	wire ioe;
+	wire [1:0]clkdivide;
 	
-	reg [1:0]sysclkr;
+	reg [2:0]sysclkr;
 	reg memmaplock;
 	assign romen = (mreq || memmap[0]);	// memmap[0] low
 	assign ramen = (mreq || ~memmap[0] || memmap[2]);	// memmap[0] high, memmap[2] low
@@ -39,6 +40,9 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 
 	// select clock or beeper $d0-d1
 	assign clk_or_beep = (ioe && ~a07[3] && ~a07[2] && ~a07[1] );
+	// clkdivide_e	equ $d0
+	assign clkdivide_e_wr = ( !wr && clk_or_beep && ~a07[0] );
+	assign clkdivide_e_rd = ( !rd && clk_or_beep && ~a07[0] );
 	// beep	equ $d1
 	assign beep_rd = (!rd && clk_or_beep && a07[0]);	// unlocks memmap
 	assign beep_wr = (!wr && clk_or_beep && a07[0]);	// triggers beep and locks memmap
@@ -46,9 +50,6 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 	// select external IO $d4-d7
 	assign extio = ~(ioe && ~a07[3] && a07[2] );
 
-	assign sysclk = sysclkr[0];
-	always @(posedge clk) sysclkr<=sysclkr+1;
-	
 	reg beep;
 	always@(posedge beep_wr)
 		beep <= ~beep;
@@ -62,11 +63,26 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 			memmaplock <= 1;
 	end
 
+	clkgen clkgen(
+		.clk (clk),
+		.cpuclk (sysclk),
+		.clkdivide (clkdivide[1:0])
+	);
 	
+	// clkdivide	equ $d0
+	clkdivide_r clkdivide_r(
+		.reset (reset),
+		.clkdivide_e_wr (clkdivide_e_wr),
+		.clkdivide (clkdivide[1:0]),
+		.data (data[1:0])
+	);
+
 	dio dio(
 		.data (data),
 		.memmaprd (memmaprd),
 		.memmap (memmap[2:0]),
+//		.clkdivide_e_rd (clkdivide_e_rd),
+//		.clkdivide (clkdivide[1:0])
 	);
 	
 	// memmap	equ $d8
@@ -83,11 +99,54 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 		
 endmodule
 
+module clkgen(clk,cpuclk,clkdivide);
+	input clk;
+	output cpuclk;
+	input [1:0]clkdivide;
+	
+	reg [1:0]cpucnt;
+	reg cpuclk;
+	always @(posedge clk) begin
+		if (cpucnt == clkdivide) begin
+		   cpuclk <= ~cpuclk;
+		   cpucnt <= 2'd0;
+		end
+		else
+			cpucnt <= cpucnt + 2'd1;
+	end
+
+endmodule
+
+module clkdivide_r(reset,clkdivide_e_wr,clkdivide,data);
+	input reset;
+	input clkdivide_e_wr;
+	output [1:0]clkdivide;
+	input [1:0]data;
+	
+	reg [1:0]clkdivide;
+
+	initial clkdivide <= 2'h01;
+	
+	always @(posedge clkdivide_e_wr,negedge reset) begin
+		if (reset == 0) begin
+			clkdivide <= 2'h01;
+		end
+		else begin
+			clkdivide <= data[1:0];
+		end
+	end
+	
+endmodule
+
 
 module dio(data,memmaprd,memmap);
 	output [7:0]data;
 	input memmaprd;
 	input [2:0]memmap;
+//	input clkdivide_e_rd;
+//	input [1:0]clkdivide;
+	
+//	assign data = (clkdivide_e_rd) ? {{7'd0,clkdivide}} : (memmaprd) ? {{6'd0,memmap}} : 8'bZ;
 	
 	assign data = (memmaprd) ? {{5'd0,memmap}} : 8'bZ;
 
