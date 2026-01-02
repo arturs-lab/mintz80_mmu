@@ -9,3 +9,8 @@ mintz80_mmu_nativelink_simulation.rpt
 *output_files/mintz80_mmu.*.smsg
 *output_files/mintz80_mmu.cdf
 *output_files/mintz80_mmu.done
+mintz80_mmu*/mintz80_mmu.*.summary
+mintz80_mmu*/mintz80_mmu.*.rpt
+mintz80_mmu*/mintz80_mmu.*.smsg
+mintz80_mmu*/mintz80_mmu.cdf
+mintz80_mmu*/mintz80_mmu.done
