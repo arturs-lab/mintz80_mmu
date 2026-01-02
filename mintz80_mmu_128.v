@@ -47,8 +47,7 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 	assign beep_wr = (!wr && clk_or_beep && a07[0]);	// triggers beep and locks memmap
 
 	// select external IO $d4-d7
-	//assign extio = ~(ioe && ~a07[3] && a07[2] );
-	assign extio = memmaplock;
+	assign extio = ~(ioe && ~a07[3] && a07[2] );
 
 	reg beep;
 	always@(posedge beep_wr)
@@ -94,7 +93,7 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 		.data (data[1:0]),
 		.outsel (a1513[15:13]),
 		.out (banksel[1:0]),
-//		.memmaplock (memmaplock)
+		.memmaplock (memmaplock)
 	);
 		
 endmodule
@@ -125,11 +124,11 @@ module clkdivide_r(reset,clkdivide_e_wr,clkdivide,data);
 	
 	reg [5:0]clkdivide;
 
-	initial clkdivide <= 6'h00;
+	initial clkdivide <= 6'h01;
 	
 	always @(posedge clkdivide_e_wr,negedge reset) begin
 		if (reset == 0) begin
-			clkdivide <= 6'h00;
+			clkdivide <= 6'h01;
 		end
 		else begin
 			clkdivide <= data[5:0];
@@ -146,11 +145,10 @@ module dio(data,memmaprd,memmapdta,clkdivide_e_rd,clkdivide);
 	input [5:0]clkdivide;
 	
 	assign data = (clkdivide_e_rd) ? {{2'd0,clkdivide}} : (memmaprd) ? {{6'd0,memmapdta}} : 8'bZ;
-	//assign data = 8'bZ;
 
 endmodule
 
-module memmap(reset,memmapwr,adr,data,memmapdta,outsel,out);//,memmaplock);
+module memmap(reset,memmapwr,adr,data,memmapdta,outsel,out,memmaplock);
 	input reset;
 	input memmapwr;
 	input [2:0]adr;
@@ -158,7 +156,7 @@ module memmap(reset,memmapwr,adr,data,memmapdta,outsel,out);//,memmaplock);
 	output [1:0]memmapdta;
 	input [2:0]outsel;
 	output [1:0]out;
-//	input memmaplock;
+	input memmaplock;
 	
 	reg [1:0]memmap [7:0];
 	
@@ -177,19 +175,8 @@ module memmap(reset,memmapwr,adr,data,memmapdta,outsel,out);//,memmaplock);
 			memmap[3'd7] <= 2'd1;
 		end
 		else begin
-//			if ( memmaplock == 1 ) memmap[adr] <= data;
-			memmap[adr] <= data;
-/*			case (adr) 
-				0: memmap[0] <= data;
-				1: memmap[1] <= data;
-				2: memmap[2] <= data;
-				3: memmap[3] <= data;
-				4: memmap[4] <= data;
-				5: memmap[5] <= data;
-				6: memmap[6] <= data;
-				7: memmap[7] <= data;
-			endcase				
-*/		end
+			if ( memmaplock == 1 ) memmap[adr] <= data;
+		end
 	end
 		
 endmodule
