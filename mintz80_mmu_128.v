@@ -1,4 +1,4 @@
-module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b14,b16,b17,b18,beep,extio);
+module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b14,b16,beep,extio);
 	input clk;
 	output sysclk;
 	input reset;
@@ -13,15 +13,13 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 	output ramen;
 	output b14;
 	output b16;
-	output b17;
-	output b18;
 	output beep;
 	output extio;
 
 	wire romen;
 	wire ramen;
 	wire memmapwr;
-	wire [3:0]banksel;
+	wire [1:0]banksel;
 	wire ioe;
 	wire [5:0]clkdivide;
 	wire [1:0]memmapdta;
@@ -30,8 +28,6 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 	assign romen = (mreq || banksel[0]);	// banksel[0] low
 	assign ramen = (mreq || ~banksel[0]);	// banksel[0] high
 	assign b16=banksel[1];
-	assign b17=banksel[2];
-	assign b18=banksel[3];
 	assign b14=(banksel[0]==0) ? banksel[1] : a1513[14];
 
 	// ioe equ $d0 - $df
@@ -51,7 +47,8 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 	assign beep_wr = (!wr && clk_or_beep && a07[0]);	// triggers beep and locks memmap
 
 	// select external IO $d4-d7
-	assign extio = ~(ioe && ~a07[3] && a07[2] );
+	//assign extio = ~(ioe && ~a07[3] && a07[2] );
+	assign extio = memmaplock;
 
 	reg beep;
 	always@(posedge beep_wr)
@@ -94,10 +91,10 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 		.memmapwr (memmapwr),
 		.memmapdta (memmapdta[1:0]),
 		.adr (a07[2:0]),
-		.data (data[3:0]),
+		.data (data[1:0]),
 		.outsel (a1513[15:13]),
-		.out (banksel[3:0]),
-		.memmaplock (memmaplock)
+		.out (banksel[1:0]),
+//		.memmaplock (memmaplock)
 	);
 		
 endmodule
@@ -128,11 +125,11 @@ module clkdivide_r(reset,clkdivide_e_wr,clkdivide,data);
 	
 	reg [5:0]clkdivide;
 
-	initial clkdivide <= 6'h05;
+	initial clkdivide <= 6'h00;
 	
 	always @(posedge clkdivide_e_wr,negedge reset) begin
 		if (reset == 0) begin
-			clkdivide <= 6'h05;
+			clkdivide <= 6'h00;
 		end
 		else begin
 			clkdivide <= data[5:0];
@@ -144,43 +141,44 @@ endmodule
 module dio(data,memmaprd,memmapdta,clkdivide_e_rd,clkdivide);
 	output [7:0]data;
 	input memmaprd;
-	input [3:0]memmapdta;
+	input [1:0]memmapdta;
 	input clkdivide_e_rd;
 	input [5:0]clkdivide;
 	
-	assign data = (clkdivide_e_rd) ? {{2'd0,clkdivide}} : (memmaprd) ? {{4'd0,memmapdta}} : 8'bZ;
+	assign data = (clkdivide_e_rd) ? {{2'd0,clkdivide}} : (memmaprd) ? {{6'd0,memmapdta}} : 8'bZ;
 	//assign data = 8'bZ;
 
 endmodule
 
-module memmap(reset,memmapwr,adr,data,memmapdta,outsel,out,memmaplock);
+module memmap(reset,memmapwr,adr,data,memmapdta,outsel,out);//,memmaplock);
 	input reset;
 	input memmapwr;
 	input [2:0]adr;
-	input [3:0]data;
-	output [3:0]memmapdta;
+	input [1:0]data;
+	output [1:0]memmapdta;
 	input [2:0]outsel;
-	output [3:0]out;
-	input memmaplock;
+	output [1:0]out;
+//	input memmaplock;
 	
-	reg [3:0]memmap [7:0];
+	reg [1:0]memmap [7:0];
 	
 	assign memmapdta = memmap[adr];
 	assign out = memmap[outsel];
 
 	always @(negedge reset, posedge memmapwr) begin
 		if (reset == 0) begin
-			memmap[3'd0] <= 4'd0;
-			memmap[3'd1] <= 4'd1;
-			memmap[3'd2] <= 4'd1;
-			memmap[3'd3] <= 4'd1;
-			memmap[3'd4] <= 4'd1;
-			memmap[3'd5] <= 4'd1;
-			memmap[3'd6] <= 4'd1;
-			memmap[3'd7] <= 4'd1;
+			memmap[3'd0] <= 2'd0;
+			memmap[3'd1] <= 2'd1;
+			memmap[3'd2] <= 2'd1;
+			memmap[3'd3] <= 2'd1;
+			memmap[3'd4] <= 2'd1;
+			memmap[3'd5] <= 2'd1;
+			memmap[3'd6] <= 2'd1;
+			memmap[3'd7] <= 2'd1;
 		end
 		else begin
-			if ( memmaplock == 1 ) memmap[adr] <= data;
+//			if ( memmaplock == 1 ) memmap[adr] <= data;
+			memmap[adr] <= data;
 /*			case (adr) 
 				0: memmap[0] <= data;
 				1: memmap[1] <= data;
@@ -195,4 +193,3 @@ module memmap(reset,memmapwr,adr,data,memmapdta,outsel,out,memmaplock);
 	end
 		
 endmodule
-
