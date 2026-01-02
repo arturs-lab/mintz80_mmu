@@ -23,8 +23,6 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 	wire ioe;
 	wire [1:0]clkdivide;
 	
-	reg [2:0]sysclkr;
-	reg memmaplock;
 	assign romen = (mreq || memmap[0]);	// memmap[0] low
 	assign ramen = (mreq || ~memmap[0] || memmap[2]);	// memmap[0] high, memmap[2] low
 	assign ramen2 = (mreq || ~memmap[0] || ~memmap[2]);	// memmap[0] high, memmap[2] high
@@ -47,22 +45,10 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 	assign beep_rd = (!rd && clk_or_beep && a07[0]);	// unlocks memmap
 	assign beep_wr = (!wr && clk_or_beep && a07[0]);	// triggers beep and locks memmap
 
-	// select external IO $d4-d7
-	assign extio = ~(ioe && ~a07[3] && a07[2] );
-
 	reg beep;
 	always@(posedge beep_wr)
 		beep <= ~beep;
 		
-	always@(posedge beep_wr,posedge beep_rd, negedge reset) begin
-		if (reset == 0) begin
-			memmaplock <= 0;
-		end else if ( beep_wr == 1 ) begin
-			memmaplock <= 0;
-		end else if ( beep_rd == 1 ) 	
-			memmaplock <= 1;
-	end
-
 	clkgen clkgen(
 		.clk (clk),
 		.cpuclk (sysclk),
@@ -94,7 +80,6 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 		.outsel (a1513[15:13]),
 		.out (memmap[2:0]),
 		.memmaprd (memmaprd),
-		.memmaplock (memmaplock)
 	);
 		
 endmodule
@@ -148,7 +133,7 @@ module dio(data,memmaprd,memmap);
 
 endmodule
 
-module memmapr(reset,memmapwr,adr,data,out,outsel,out,memmaprd,memmaplock);
+module memmapr(reset,memmapwr,adr,data,out,outsel,out,memmaprd);
 	input reset;
 	input memmapwr;
 	input [2:0]adr;
@@ -156,7 +141,6 @@ module memmapr(reset,memmapwr,adr,data,out,outsel,out,memmaprd,memmaplock);
 	output [2:0]out;
 	input [2:0]outsel;
 	input memmaprd;
-	input memmaplock;
 	
 	reg [2:0]memmap [7:0];
 	
@@ -174,9 +158,8 @@ module memmapr(reset,memmapwr,adr,data,out,outsel,out,memmaprd,memmaplock);
 			memmap[3'd7] <= 3'd1;
 		end
 		else begin
-			if ( memmaplock == 1 ) memmap[adr] <= data;
+			memmap[adr] <= data;
 		end
 	end
 		
 endmodule
-
