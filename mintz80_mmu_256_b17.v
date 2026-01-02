@@ -47,7 +47,7 @@ module mintz80_mmu(clk,sysclk,reset,rd,wr,a07,a1513,data,mreq,iorq,ramen,romen,b
 
 	// select external IO $d4-d7
 	assign extio = ~(ioe && ~a07[3] && a07[2] );
-	
+
 	reg beep;
 	always@(posedge beep_wr)
 		beep <= ~beep;
@@ -92,12 +92,16 @@ module clkgen(clk,cpuclk,clkdivide);
 	output cpuclk;
 	input [1:0]clkdivide;
 	
-	reg [3:0]cpucnt;
-	wire cpuclk;
-	
-	always @(posedge clk) cpucnt <= cpucnt + 4'd01;
-	
-	assign cpuclk = (clkdivide == 2'd3) ? cpucnt[3] : (clkdivide == 2'd2) ? cpucnt[2] : (clkdivide == 2'd1) ? cpucnt[1] : cpucnt[0];
+	reg [1:0]cpucnt;
+	reg cpuclk;
+	always @(posedge clk) begin
+		if (cpucnt == clkdivide) begin
+		   cpuclk <= ~cpuclk;
+		   cpucnt <= 2'd0;
+		end
+		else
+			cpucnt <= cpucnt + 2'd1;
+	end
 
 endmodule
 
