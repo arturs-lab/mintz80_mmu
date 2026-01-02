@@ -1,1 +1,9 @@
 attic
+simulation
+db
+incremental_db
+*output_files/mintz80_mmu.*.summary
+*output_files/mintz80_mmu.*.rpt
+*output_files/mintz80_mmu.*.smsg
+*output_files/mintz80_mmu.cdf
+*output_files/mintz80_mmu.done
