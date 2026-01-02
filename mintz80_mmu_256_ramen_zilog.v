@@ -104,16 +104,12 @@ module clkgen(clk,cpuclk,clkdivide);
 	output cpuclk;
 	input [1:0]clkdivide;
 	
-	reg [1:0]cpucnt;
-	reg cpuclk;
-	always @(posedge clk) begin
-		if (cpucnt == clkdivide) begin
-		   cpuclk <= ~cpuclk;
-		   cpucnt <= 2'd0;
-		end
-		else
-			cpucnt <= cpucnt + 2'd1;
-	end
+	reg [3:0]cpucnt;
+	wire cpuclk;
+	
+	always @(posedge clk) cpucnt <= cpucnt + 4'd01;
+	
+	assign cpuclk = (clkdivide == 3) ? cpucnt[3] : (clkdivide == 2) ? cpucnt[2] : (clkdivide == 1) ? cpucnt[1] : cpucnt[0];
 
 endmodule
 
