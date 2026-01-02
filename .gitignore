@@ -2,6 +2,8 @@ attic
 simulation
 db
 incremental_db
+mintz80_mmu.v.bak
+mintz80_mmu_nativelink_simulation.rpt
 *output_files/mintz80_mmu.*.summary
 *output_files/mintz80_mmu.*.rpt
 *output_files/mintz80_mmu.*.smsg
